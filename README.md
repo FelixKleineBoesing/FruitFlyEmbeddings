@@ -11,3 +11,14 @@ Some Researches proposed a model that is strongly based on the neural net of a f
 
 I want to implement the proposed architecture. Instead of word embeddings I will use market baskets to build product embeddings for an online retailer. 
 This decision is solely based on the fact, that I do not want so spend ~1 day with training and therefore came up with an use cases that is a lot easier to interpret whiel having the same nature of embeddings.
+
+
+### Setup
+
+Download the dataset from [kaggle](https://www.kaggle.com/puneetbhaya/online-retail) and put it into a directory called "data".
+
+Install all requirements:
+
+``
+pip3 install -r requirements.txt
+``
