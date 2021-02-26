@@ -21,10 +21,10 @@ class FruitFly(tf.keras.models.Model):
         self.kenyon_cells = Dense(n_kenyon, dtype=tf.float64)
         self.batch_size = batch_size
         if optimizer is None:
-            optimizer = Adam(lr=tf.Variable(0.01),
-                             beta_1=tf.Variable(0.9),
-                             beta_2=tf.Variable(0.999),
-                             epsilon=tf.Variable(1e-7)
+            optimizer = Adam(lr=tf.Variable(0.01, dtype=tf.float64),
+                             beta_1=tf.Variable(0.9, dtype=tf.float64),
+                             beta_2=tf.Variable(0.999, dtype=tf.float64),
+                             epsilon=tf.Variable(1e-7, dtype=tf.float64)
                              )
             optimizer.iterations
             optimizer.decay = tf.Variable(0.0)

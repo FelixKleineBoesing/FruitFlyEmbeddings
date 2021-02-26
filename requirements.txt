@@ -1,1 +1,5 @@
 tensorflow
+pandas
+numpy
+openpyxl
+xlrd
