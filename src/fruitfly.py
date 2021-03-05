@@ -22,6 +22,7 @@ class FruitFly(tf.keras.models.Model):
         super().__init__()
         self.projection_layer = InputLayer(vocab_size * 2, dtype=tf.float64)
         self.kenyon_cells = Dense(n_kenyon, dtype=tf.float64)
+        self.n_kenyon = n_kenyon
         self.batch_size = batch_size
         self.vocab_size = vocab_size
         if optimizer is None:
@@ -99,11 +100,19 @@ class FruitFly(tf.keras.models.Model):
         )
         return energy
 
+    def _get_gradients(self, x, w, kn, p):
+        mu_hat = tf.argmax(kn, axis=1)
+        gradient = tf.zeros((self.n_kenyon, 2 * self.vocab_size))
+        x = x / p
+        weight_update = x - w[:, mu_hat].transpose() * tf.expand_dims(tf.reduce_sum(x * w[:, mu_hat].transpose(), axis=1), 1)
+        gradient = tf.tensor_scatter_nd_add(gradient, tf.expand_dims(mu_hat, 1), weight_update).transpose()
+        return gradient
+
     def _train_step(self, X, word_prob):
         with tf.GradientTape() as g:
             y, loss = self.call(X, word_prob)
         variables = self.trainable_variables
-        gradients = g.gradient(loss, variables)
+        gradients = self._get_gradients(X, self.kenyon_cells.weights[0], y, word_prob)
         self.optimizer.apply_gradients(zip(gradients, variables))
         return loss
 
