@@ -12,7 +12,7 @@ from src.helpers import create_train_test_splits, tokenize_sentences, build_targ
 
 physical_devices = tf.config.list_physical_devices('GPU')
 if len(physical_devices) > 0:
-   tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
+    tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
 
 
 class FruitFly(tf.keras.models.Model):
@@ -25,7 +25,7 @@ class FruitFly(tf.keras.models.Model):
         self.batch_size = batch_size
         self.vocab_size = vocab_size
         if optimizer is None:
-            optimizer = Adam(lr=tf.Variable(0.01, dtype=tf.float64),
+            optimizer = Adam(lr=tf.Variable(10e-4, dtype=tf.float64),
                              beta_1=tf.Variable(0.9, dtype=tf.float64),
                              beta_2=tf.Variable(0.999, dtype=tf.float64),
                              epsilon=tf.Variable(1e-7, dtype=tf.float64)
@@ -40,8 +40,7 @@ class FruitFly(tf.keras.models.Model):
     def call(self, X, word_prob):
         X = tf.convert_to_tensor(X, dtype=tf.float64)
         y = tf.matmul(X, self.W)
-        loss = self.get_loss(X, y, word_prob)
-        return y, loss
+        return y
 
     def get_word_prob(self, word_counts, index_word):
         prob = np.zeros((self.vocab_size * 2, ))
@@ -62,7 +61,8 @@ class FruitFly(tf.keras.models.Model):
         for epoch in range(number_epochs):
             loss_per_batch = []
             for (batch, (input, )) in enumerate(dataset.take(steps_per_epoch)):
-                batch_loss = self._train_step(input, word_prob)
+                y = self._train_step(input, word_prob)
+                batch_loss = self.get_loss(input, y, word_prob)
                 loss_per_batch.append(batch_loss)
                 if batch % 10 == 0 and batch > 1:
                     print("Batch loss: {}".format(np.mean(loss_per_batch[-10:])))
@@ -110,18 +110,19 @@ class FruitFly(tf.keras.models.Model):
         return gradient
 
     def _train_step(self, X, word_prob):
-        y, loss = self.call(X, word_prob)
+        y = self.call(X, word_prob)
         variables = self.trainable_variables
         gradients = self._get_gradients(X, y, word_prob)
         self.optimizer.apply_gradients(zip(gradients, variables))
-        return loss
+        return y
 
 
 if __name__ == "__main__":
+    # For the sole purpose of being able to calculate it on my system
     train_data_share = 0.2
     data = pd.read_feather(Path("..", "data", "products.feather"))
     data = data.iloc[np.random.choice(np.arange(data.shape[0]), size=int(train_data_share*data.shape[0])), :]
-    fruitfly = FruitFly(3000, n_kenyon=100)
+    fruitfly = FruitFly(3000, n_kenyon=100, window_size=10)
     fruitfly.train(data["StockCode"].tolist())
 
 
