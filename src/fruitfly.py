@@ -94,15 +94,10 @@ class FruitFly(tf.keras.models.Model):
         """
         x = tf.cast(x, p.dtype)
         x = x / p
-        ken_cell_indices = tf.math.argmax(kn, axis=1)
-        inner_product_squared = {i: tf.square(tf.tensordot(self.W[:, i], self.W[:, i], axes=1)) for i in range(self.W.shape[1])}
-        energy = - tf.reduce_sum(
-            [
-                tf.tensordot(self.W[:, ken_cell_indices[j]], x[j, :], axes=1) /
-                inner_product_squared[int(ken_cell_indices[j])]
-                for j in range(x.shape[0])
-            ]
-        )
+        mu_hat = tf.math.argmax(kn, axis=1)
+        max_driven_weights = tf.transpose(tf.gather(self.W, mu_hat, axis=1))
+        energy = - tf.reduce_sum(tf.reduce_sum(x * max_driven_weights, axis=1) /
+                                 tf.square(tf.reduce_sum(max_driven_weights * max_driven_weights, axis=1)))
         return energy
 
     def _get_gradients(self, x, kn, p):
