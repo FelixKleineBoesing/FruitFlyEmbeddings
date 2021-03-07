@@ -74,14 +74,19 @@ class FruitFly(tf.keras.models.Model):
         word_prob = self.get_word_prob(tokenizer.word_counts, tokenizer.index_word)
         y, X = build_target_context(sentences, windows_size=self.window_size)
         self.tokenizer, self.word_index = tokenizer, word_index
-        target, context = tokenizer.texts_to_matrix(y), tokenizer.texts_to_matrix(X)
-        X = np.concatenate((context[:, 1:], target[:, 1:]), axis=1)
-        X = X.astype(np.float64, copy=False)
+        X = self._convert_sentences_to_matrix(X, y)
         splits = create_train_test_splits(X)
         buffer_size = splits[0].shape[0]
         dataset = Dataset.from_tensor_slices((splits[0],)).shuffle(buffer_size=buffer_size)
         dataset = dataset.batch(self.batch_size)
         return dataset, word_prob, buffer_size
+
+    def _convert_sentences_to_matrix(self, X, y):
+        assert self.tokenizer is not None, "Model must be trained first"
+        target, context = self.tokenizer.texts_to_matrix(y), self.tokenizer.texts_to_matrix(X)
+        X = np.concatenate((context[:, 1:], target[:, 1:]), axis=1)
+        X = X.astype(np.float64, copy=False)
+        return X
 
     def get_loss(self, x, kn, p):
         """
@@ -116,13 +121,34 @@ class FruitFly(tf.keras.models.Model):
         self.optimizer.apply_gradients(zip(gradients, variables))
         return y
 
+    def get_hashes(self, target, context=None):
+        """
+
+        :param target: target word
+        :param context: context
+        :return:
+        """
+        if isinstance(target, (list, str)):
+            if context is None:
+                context = [None for _ in range(len(target))]
+            X = self._convert_sentences_to_matrix(context, target)
+        else:
+            X = target
+        y = tf.matmul(X, self.W)
+        indices = tf.math.top_k(y, axis=1)
+        hashes = tf.zeros(X.shape[0], self.n_kenyon)
+        hashes = tf.tensor_scatter_nd_add(hashes, indices, 1)
+        return hashes
+
 
 if __name__ == "__main__":
     # For the sole purpose of being able to calculate it on my system
-    train_data_share = 0.2
+    train_data_share = 0.02
     data = pd.read_feather(Path("..", "data", "products.feather"))
     data = data.iloc[np.random.choice(np.arange(data.shape[0]), size=int(train_data_share*data.shape[0])), :]
-    fruitfly = FruitFly(3000, n_kenyon=100, window_size=10)
-    fruitfly.train(data["StockCode"].tolist())
+    fruitfly = FruitFly(300, n_kenyon=100, window_size=10)
+    fruitfly.train(data["StockCode"].tolist(), number_epochs=1)
+    print(fruitfly.get_hashes(target="85123A", context="71053 84406B"))
+    print(fruitfly.get_hashes(target="85123A"))
 
 
