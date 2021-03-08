@@ -1,5 +1,5 @@
 # FruitFlyEmbeddings
-My own implementation of the FruitFlyEmbeddings Paper
+tensorflow implementation of the FruitFlyEmbeddings Paper
 
 ### Background
 
